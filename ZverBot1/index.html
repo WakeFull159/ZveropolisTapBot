@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>ZverBot</title>
+  <script src="https://unpkg.com/@tonconnect/ui@1"></script>
+  <style>
+    body { margin:0; padding:0; background:#000; color:white; font-family:sans-serif; overflow:hidden; }
+    #game { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    #coin { width:280px; height:280px; background:url('https://i.ibb.co/5Y7nX7P/zvercoin.png') center/cover; cursor:pointer; }
+    #balance { font-size:48px; font-weight:bold; margin:20px; }
+    #energy { font-size:24px; }
+    .bar { width:300px; height:20px; background:#333; border-radius:10px; overflow:hidden; margin:10px; }
+    .fill { height:100%; width:100%; background:#ff0; transition:width 0.3s; }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="balance">0 $ZVER</div>
+    <div id="coin" onclick="tap()"></div>
+    <div id="energy">Энергия: <span id="energyText">500</span>/500</div>
+    <div class="bar"><div class="fill" id="energyBar"></div></div>
+    <button onclick="connectWallet()" style="margin-top:30px;padding:15px 30px;font-size:20px;border:none;border-radius:15px;background:#0088cc;color:white;cursor:pointer;">Подключить TON-кошелёк</button>
+  </div>
+
+  <script>
+    let balance = 0;
+    let energy = 500;
+    const maxEnergy = 500;
+    let tapsPerClick = 1;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('startapp') || null;
+
+    // Загружаем данные из localStorage
+    if (localStorage.getItem('zverBalance')) {
+      balance = parseInt(localStorage.getItem('zverBalance'));
+      energy = parseInt(localStorage.getItem('zverEnergy'));
+      updateUI();
+    }
+
+    function tap() {
+      if (energy < tapsPerClick) return;
+      energy -= tapsPerClick;
+      balance += tapsPerClick;
+      saveData();
+      updateUI();
+
+      // анимация
+      const coin = document.getElementById('coin');
+      coin.style.transform = 'scale(0.95)';
+      setTimeout(()=> coin.style.transform = 'scale(1)', 100);
+
+      // +1 над монетой
+      const plus = document.createElement('div');
+      plus.textContent = '+' + tapsPerClick;
+      plus.style.position = 'absolute';
+      plus.style.fontSize = '40px';
+      plus.style.fontWeight = 'bold';
+      plus.style.color = '#ff0';
+      plus.style.pointerEvents = 'none';
+      plus.style.left = (event.touches ? event.touches[0].clientX : event.clientX) + 'px';
+      plus.style.top = (event.touches ? event.touches[0].clientY - 30 : event.clientY - 30) + 'px';
+      document.body.appendChild(plus);
+      setTimeout(()=> plus.remove(), 1000);
+      plus.style.transition = 'all 1s';
+      plus.style.transform = 'translateY(-100px)';
+      plus.style.opacity = '0';
+    }
+
+    function updateUI() {
+      document.getElementById('balance').textContent = balance.toLocaleString() + ' $ZVER';
+      document.getElementById('energyText').textContent = energy;
+      document.getElementById('energyBar').style.width = (energy / maxEnergy * 100) + '%';
+    }
+
+    function saveData() {
+      localStorage.setItem('zverBalance', balance);
+      localStorage.setItem('zverEnergy', energy);
+    }
+
+    // Восстановление энергии
+    setInterval(()=>{
+      if (energy < maxEnergy) {
+        energy += 1;
+        saveData();
+        updateUI();
+      }
+    }, 3000); // +1 энергия каждые 3 секунды
+
+    async function connectWallet() {
+      const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+        manifestUrl: 'https://raw.githubusercontent.com/delovoyhomie/zveropolis-tonconnect/main/tonconnect-manifest.json'
+      });
+      await tonConnectUI.connectWallet();
+      alert('Кошелёк подключён! Скоро будет вывод');
+    }
+  </script>
+</body>
+</html>
